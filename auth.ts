@@ -3,7 +3,6 @@ import Credentials from 'next-auth/providers/credentials';
 import { authConfig } from './auth.config';
 import { z } from 'zod';
 import type { User } from '@/app/lib/definitions';
-import bcrypt from 'bcrypt';
 import postgres from 'postgres';
 
 const sql = postgres(process.env.POSTGRES_URL!, { ssl: 'require' });
@@ -27,13 +26,34 @@ export const { auth, signIn, signOut } = NextAuth({
                     .object({ email: z.string().email(), password: z.string().min(6) })
                     .safeParse(credentials);
 
-                if (parsedCredentials.success) {
-                    const { email, password } = parsedCredentials.data;
-                    const user = await getUser(email);
-                    if (!user) return null;
+                if (!parsedCredentials.success) {
+                    console.log('❌ Invalid input format');
+                    return null;
                 }
 
-                return null;
+                const { email, password } = parsedCredentials.data;
+                const user = await getUser(email);
+                if (!user) {
+                    console.log('❌ User not found:', email);
+                    return null;
+                }
+
+                console.log('✅ User found:', user.email);
+
+
+                // if (parsedCredentials.success) {
+
+                //     const { email, password } = parsedCredentials.data;
+                //     const user = await getUser(email);
+                //     if (!user) return null;
+                // }
+
+                if (password === user.password) {
+                    console.log('✅ password matched');
+                    return user;
+                }
+
+                return user;
             },
         }),
     ],
